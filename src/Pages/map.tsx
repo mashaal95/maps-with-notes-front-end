@@ -1,26 +1,19 @@
 import { useEffect, useState } from "react";
 import {
   GoogleMap,
+  Marker,
   MarkerF,
-  useJsApiLoader,
-  InfoWindow,
-  OverlayView
+  useJsApiLoader
 } from "@react-google-maps/api";
-import SearchIcon from "@mui/icons-material/SearchOutlined";
-import CloseIcon from "@mui/icons-material/CloseOutlined";
 import {
-  TextField,
-  Popover,
-  Dialog,
+  Card,
+  CardContent,
+  Typography,
+  Slide,
   IconButton,
-  Button,
-  CardActions
+  Button
 } from "@mui/material";
-import DialogBox from "../Components/dialog";
-
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import Typography from "@mui/material/Typography";
+import CloseIcon from "@mui/icons-material/CloseOutlined";
 
 const containerStyle = {
   width: "100%",
@@ -40,34 +33,11 @@ const Map = () => {
     googleMapsApiKey: googleMapsApiKey
   });
 
-  if (!isLoaded) return <div>Loading...</div>;
-
-  return <MapLoad />;
-};
-
-const MapLoad = () => {
   const [currentLocation, setCurrentLocation] =
     useState<null | google.maps.LatLng>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [selectedMarker, setSelectedMarker] =
     useState<null | google.maps.LatLng>(null);
-
-  const initialNotes = [
-    { id: 1, text: "Note 1", location: { lat: 42.35, lng: -70.9 } },
-    { id: 2, text: "Note 2", location: { lat: 42.5, lng: -71.2 } }
-  ];
-  const [notes, setNotes] = useState(initialNotes);
-  const [isCardOpen, setIsCardOpen] = useState(false);
-
-  const handleMarkerDoubleClick = () => {
-    setIsDialogOpen(true);
-    handleMarkerClickClose();
-  };
-
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-  };
 
   useEffect(() => {
     // Get the user's current location using the Geolocation API
@@ -80,93 +50,96 @@ const MapLoad = () => {
         console.log("Error getting current location:", error);
       }
     );
-
-    setNotes(initialNotes);
   }, []);
 
+  const [isOpen, setIsOpen] = useState(false);
+
   const handleMarkerClick = (marker: any) => {
-    setSelectedMarker(marker === selectedMarker ? null : marker);
-    setIsCardOpen(true);
+    setSelectedMarker(marker);
   };
 
-  const handleMarkerClickClose = () => {
+  const handleCardClose = () => {
     setSelectedMarker(null);
-    setIsCardOpen(false);
+  };
+
+  const handleOpenAnotherCard = () => {
+    setIsOpen(true);
+    setSelectedMarker(null);
+  };
+
+  const handleCloseAnotherCard = () => {
+    setIsOpen(false);
   };
 
   return (
     <>
-      <div
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          zIndex: 1
-        }}
-      >
-        <TextField
-          variant="standard"
-          placeholder="Search..."
-          InputProps={{
-            startAdornment: <SearchIcon />
-          }}
-        />
-      </div>
+      {selectedMarker && (
+        <Slide direction="right" in={true} mountOnEnter unmountOnExit>
+          <Card
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              zIndex: 1
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6">Marker Info</Typography>
+              <Typography>{`Latitude: ${selectedMarker.lat()}`}</Typography>
+              <Typography>{`Longitude: ${selectedMarker.lng()}`}</Typography>
+              <Button onClick={handleOpenAnotherCard}>Open Another Card</Button>
+              {/* Add any other information you want to display */}
+            </CardContent>
+            <IconButton
+              style={{ position: "absolute", top: 5, right: 5 }}
+              onClick={handleCardClose}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Card>
+        </Slide>
+      )}
 
-      <GoogleMap
-        options={{ disableDefaultUI: true }}
-        mapContainerStyle={containerStyle}
-        center={currentLocation ? currentLocation.toJSON() : center}
-        zoom={12}
-      >
-        {/* Render a marker at the current location */}
-        {currentLocation && (
-          <>
+      {isOpen && (
+        <Slide direction="right" in={isOpen} mountOnEnter unmountOnExit>
+          <Card
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              zIndex: 1
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6">Another Card</Typography>
+              <Typography>Content of the another card</Typography>
+              <Button onClick={handleCloseAnotherCard}>
+                Close Another Card
+              </Button>
+            </CardContent>
+          </Card>
+        </Slide>
+      )}
+
+      {isLoaded && (
+        <GoogleMap
+          options={{ disableDefaultUI: true }}
+          mapContainerStyle={containerStyle}
+          center={currentLocation || center}
+          zoom={12}
+        >
+          {/* Render a marker at the current location */}
+          {currentLocation && (
             <MarkerF
-              onDblClick={handleMarkerDoubleClick}
               position={{
                 lat: currentLocation.lat(),
                 lng: currentLocation.lng()
               }}
               onClick={() => handleMarkerClick(currentLocation)}
-              // onMouseOut={() => handleMarkerHover(false, null)}
             />
-
-            {selectedMarker && isCardOpen && (
-              <OverlayView
-                position={selectedMarker}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                getPixelPositionOffset={(width, height) => ({
-                  x: -(width / 2),
-                  y: -(height + 10)
-                })}
-              >
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6">Marker Info</Typography>
-                    <Typography>{`Latitude: ${selectedMarker.lat()}`}</Typography>
-                    <Typography>{`Longitude: ${selectedMarker.lng()}`}</Typography>
-                    {/* Add any other information you want to display */}
-                  </CardContent>
-                  <CardActions>
-                    <Button
-                      onClick={handleMarkerClickClose}
-                      size="small"
-                      color="primary"
-                    >
-                      Close
-                    </Button>
-                  </CardActions>
-                </Card>
-              </OverlayView>
-            )}
-          </>
-        )}
-      </GoogleMap>
-      <DialogBox
-        isDialogOpen={isDialogOpen}
-        handleDialogClose={handleDialogClose}
-      />
+          )}
+        </GoogleMap>
+      )}
     </>
   );
 };
