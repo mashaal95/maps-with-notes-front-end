@@ -148,6 +148,14 @@ const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
         notesText: data.notesText
       })
       .then((response) => {
+        axios
+      .get("https://localhost:7129/api/Notes")
+      .then((response) => {
+        setNotes(response.data);
+      })
+      .catch((error) => {
+        console.log("Error fetching notes:", error);
+      });
         // Handle the response data if needed
   
         console.log(response.data);
@@ -253,9 +261,9 @@ const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
                   helperText={errors.notesText ? "Notes text is required" : ""}
                   style={{ marginBottom: "1rem" }} 
                 />
-                <Button type="submit">Save Notes</Button>
+                <Button type="submit" color="success">Save Notes</Button>
                 <Button onClick={handleCloseAnotherCard}>Go Back</Button>
-                <Button onClick={handleCloseNote}>Cancel</Button>
+                <Button onClick={handleCloseNote} color="error">Cancel</Button>
               </form>
                <Snackbar
         open={snackbarOpen}
