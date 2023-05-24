@@ -14,13 +14,20 @@ import {
   TextField,
   Snackbar,
   Box,
-  Pagination
+  Pagination,
+  AppBar,
+  Toolbar,
+  Avatar,
+  CardHeader
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/CloseOutlined";
 import axios from "axios";
 import { useForm } from "react-hook-form";
 import { Note } from "../Components/types";
 import { Guid } from "guid-typescript";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { red } from "@mui/material/colors";
 
 const containerStyle = {
   width: "100%",
@@ -32,19 +39,57 @@ const center = {
   lng: 144.9568 // Initial longitude
 };
 
-const googleMapsApiKey = "AIzaSyDQhE94dGyUDXWEptcRpfvEo5vnZgCzIuI";
+
 const notesPerPage = 4; 
 
-const Map = () => {
+
+
+const apiKey = process.env.REACT_APP_SECRET_API !== undefined ? process.env.REACT_APP_SECRET_API : ""
+
+const Map = (props : {username : string}) => {
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+
+  console.log('username from app check'+props.username)
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
-    googleMapsApiKey: googleMapsApiKey
+    googleMapsApiKey: apiKey
   });
+
+  const fetchLocationName = (latitude : number, longitude : number) => {
+
+    const geocoder = new google.maps.Geocoder();
+    const latLng = new google.maps.LatLng(latitude, longitude);
+  
+    geocoder.geocode({ location: latLng }, (results, status) => {
+      if (status === "OK") {
+        if (results && results[0]) {
+          setLocationName(results[0].formatted_address);
+        } else {
+          console.log("No results found");
+        }
+      } else {
+        console.log("Geocoder failed due to: " + status);
+      }
+    });
+  };
+
+
+  const handleSearchQueryChange = (event : any) => {
+    setCurrentPage(1);
+    setSearchQuery(event.target.value);
+  };
+  
+
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
+  const [userId, setUserId] = useState("");
+
   const [currentLocation, setCurrentLocation] =
-    useState<null | google.maps.LatLng>(null);
+    useState<null | {latitude: number, longitude: number}>(null)
+
 
   const [selectedMarker, setSelectedMarker] =
     useState<null | google.maps.LatLng>(null);
@@ -53,6 +98,7 @@ const Map = () => {
 
     const [notes, setNotes] = useState<Note[]>([{
       userId: Guid.createEmpty(),
+      username: "mashaal95",
       locationName: "Melbourne",
       notesText : "as"
     }])
@@ -68,14 +114,27 @@ useEffect(() => {
       .catch((error) => {
         console.log("Error fetching notes:", error);
       });
+
+      axios
+      .get("https://localhost:7129/api/User/"+props.username)
+      .then((response) => {
+        console.log('response from my API '+ response.data)
+        setUserId(response.data)
+      })
+      .catch((error) => {
+        console.log("Error fetching notes:", error);
+      });
+  
   }, []);
+
 
   useEffect(() => {
     // Get the user's current location using the Geolocation API
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        setCurrentLocation(new google.maps.LatLng(latitude, longitude));
+        // setCurrentLocation(new google.maps.LatLng(latitude, longitude));
+        setCurrentLocation({latitude: latitude, longitude: longitude});
       },
       (error) => {
         console.log("Error getting current location:", error);
@@ -85,8 +144,12 @@ useEffect(() => {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleMarkerClick = (marker: any) => {
+  const handleMarkerClick = (marker: google.maps.LatLng) => {
     setSelectedMarker(marker);
+    
+  
+    const { lat , lng } = marker
+  fetchLocationName(lat(), lng());
   };
 
   const handleCardClose = () => {
@@ -130,9 +193,17 @@ const handlePageChange = (event: any,pageNumber: number) => {
   }
 };
 
+const filteredNotes = notes.filter(
+  (note) =>
+    note.notesText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    note.locationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    note.username.toLowerCase().includes(searchQuery.toLowerCase())
+);
+
+
 const indexOfLastNote = currentPage * notesPerPage;
 const indexOfFirstNote = indexOfLastNote - notesPerPage;
-const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
+const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
 
 
   const onSubmit = (data: any) => {
@@ -140,11 +211,12 @@ const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
     // Replace 'apiEndpoint' with your actual API endpoint
     // event.preventDefault();
 
- 
+
+    console.log('actual userid'+userId)
     axios
       .post("https://localhost:7129/api/Notes", {
-        userId: data.userId,
-        locationName: data.locationName,
+        userId: userId,
+        locationName: locationName,
         notesText: data.notesText
       })
       .then((response) => {
@@ -174,34 +246,87 @@ const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
     const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   }
+
+  if(!isLoaded) {
+    return <></>
+  }
  
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+
+       <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Landmark Remark
+          </Typography>
+          <IconButton
+            edge="end"
+            color="inherit"
+            aria-label="logout"
+            onClick={event =>  window.location.href='/'}
+          >
+            <ExitToAppIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
       {selectedMarker && (
         <Slide direction="right" in={true} mountOnEnter unmountOnExit>
           <Card
             style={{
               position: "absolute",
-              top: 10,
+              top: 80,
               left: 10,
               zIndex: 1,
               width: "15rem"
             }}
           >
             <CardContent>
-              <Typography variant="h6">Notes:</Typography>
+
+              <Typography variant="h6">Notes</Typography>
+
+              <Box sx={{ p: 2 }}>
+        <TextField
+          variant="outlined"
+          label="Search Notes"
+          placeholder="Search by user or content..."
+          value={searchQuery}
+          onChange={handleSearchQueryChange}
+          fullWidth
+          margin="normal"
+          InputLabelProps={{
+            shrink: true
+          }}
+        />
+      </Box>
+
               {currentNotes.map((note) => (
                 <Card key={note.messageId} style={{ marginBottom: "1rem", borderRadius: "10px" }}>
+                       <CardHeader
+        avatar={
+          <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">
+            U
+          </Avatar>
+        }
+        action={
+          <IconButton aria-label="settings">
+            <MoreVertIcon />
+          </IconButton>
+        }
+        title={note.username}
+        subheader={note.locationName.split(' ').slice(0, 3).join(' ')}
+      />
                   <CardContent>
-                    <Typography>{note.notesText}</Typography>
+        <Typography>
+          {note.notesText}
+        </Typography>
                   </CardContent>
                 </Card>
               ))}
               {totalPages > 1 && (
               <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
                 <Pagination
-                  count={totalPages}
+                  count={Math.ceil(filteredNotes.length / notesPerPage)}
                   page={currentPage}
                   onChange={handlePageChange}
                   color="primary"
@@ -226,31 +351,18 @@ const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
           <Card
             style={{
               position: "absolute",
-              top: 10,
+              top: 80,
               left: 10,
               zIndex: 1
             }}
           >
 
             <CardContent>
+         
               <Typography variant="h6">Add Notes</Typography>
+       
               <form onSubmit={handleSubmit(onSubmit) } style={{height: "10%", display:"flex", flexDirection:"column", justifyContent:"center",}}>
-                <TextField
-                  label="Location Name"
-                  size="small"
-                  {...register("locationName", { required: true })}
-                  error={!!errors.locationName}
-                  helperText={errors.locationName ? "Location name is required" : ""}
-                  style={{ marginBottom: "1rem" }} 
-                />
-                <TextField
-                  label="Username"
-                  size="small"
-                  {...register("userId", { required: true })}
-                  error={!!errors.username}
-                  helperText={errors.username ? "Username is required" : ""}
-                  style={{ marginBottom: "1rem" }} 
-                />
+
                 <TextField
                   label="Notes Text"
                   size="small"
@@ -260,16 +372,30 @@ const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
                   error={!!errors.notesText}
                   helperText={errors.notesText ? "Notes text is required" : ""}
                   style={{ marginBottom: "1rem" }} 
+                  InputLabelProps={{
+                    shrink: true
+                  }}
                 />
                 <Button type="submit" color="success">Save Notes</Button>
                 <Button onClick={handleCloseAnotherCard}>Go Back</Button>
                 <Button onClick={handleCloseNote} color="error">Cancel</Button>
               </form>
-               <Snackbar
+                   <Snackbar
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        message="Note saved successfully!"
+        message="Note added successfully!"
+        action={
+          <IconButton
+            size="small"
+            aria-label="close"
+            color="inherit"
+            onClick={handleCloseSnackbar}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
       />
             </CardContent>
           </Card>
@@ -280,22 +406,22 @@ const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
         <GoogleMap
           options={{ disableDefaultUI: true }}
           mapContainerStyle={containerStyle}
-          center={currentLocation || center}
+          center={center}
           zoom={12}
         >
           {/* Render a marker at the current location */}
           {currentLocation && (
             <MarkerF
               position={{
-                lat: currentLocation.lat(),
-                lng: currentLocation.lng()
+                lat: currentLocation.latitude,
+                lng: currentLocation.longitude
               }}
-              onClick={() => handleMarkerClick(currentLocation)}
+              onClick={() => handleMarkerClick(new google.maps.LatLng(currentLocation.latitude,currentLocation.longitude))}
             />
           )}
         </GoogleMap>
       )}
-    </>
+    </div>
   );
 };
 
