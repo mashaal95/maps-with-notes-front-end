@@ -33,7 +33,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
+    "lint": "eslint --ignore-path .eslintignore --ext .js,.ts ."
   },
   "eslintConfig": {
     "extends": [
@@ -54,6 +56,9 @@
     ]
   },
   "devDependencies": {
-    "@types/google.maps": "^3.53.1"
+    "@types/google.maps": "^3.53.1",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.8.8"
   }
 }

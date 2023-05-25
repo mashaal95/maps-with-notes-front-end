@@ -21,45 +21,56 @@ import {
   CardHeader
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/CloseOutlined";
-import axios from "axios";
 import { useForm } from "react-hook-form";
 import { Note } from "../Components/types";
 import { Guid } from "guid-typescript";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { red } from "@mui/material/colors";
+import mapNotesService from "../Service/mapNotesService";
+
+
+const Map = (props : {username : string}) => {
+
+  // All the initial consts
 
 const containerStyle = {
   width: "100%",
   height: "100vh"
 };
-
 const center = {
   lat: -37.8076, // Initial latitude
   lng: 144.9568 // Initial longitude
 };
-
-
-const notesPerPage = 4; 
-
-
-
-const apiKey = process.env.REACT_APP_SECRET_API !== undefined ? process.env.REACT_APP_SECRET_API : ""
-
-const Map = (props : {username : string}) => {
-
+  const notesPerPage = 4; 
+  const apiKey = process.env.REACT_APP_SECRET_API !== undefined ? process.env.REACT_APP_SECRET_API : ""
   const [searchQuery, setSearchQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [userId, setUserId] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const { register, handleSubmit, formState: { errors }, reset } = useForm();
+  const [currentLocation, setCurrentLocation] =
+    useState<null | {latitude: number, longitude: number}>(null)
+  const [selectedMarker, setSelectedMarker] =
+    useState<null | google.maps.LatLng>(null);
+  const [notes, setNotes] = useState<Note[]>([{
+      userId: Guid.createEmpty(),
+      username: "mashaal95",
+      locationName: "Melbourne",
+      notesText : "as"
+    }])
 
 
-  console.log('username from app check'+props.username)
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: apiKey
   });
 
-  const fetchLocationName = (latitude : number, longitude : number) => {
 
-  
+  // Functions 
+  const fetchLocationName = (latitude : number, longitude : number) => {
     const geocoder = new google.maps.Geocoder();
     const latLng = new google.maps.LatLng(latitude, longitude);
   
@@ -75,40 +86,14 @@ const Map = (props : {username : string}) => {
       }
     });
 
-
-
   };
-
-
   const handleSearchQueryChange = (event : any) => {
     setCurrentPage(1);
     setSearchQuery(event.target.value);
   };
   
 
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-
-  const [userId, setUserId] = useState("");
-
-  const [currentLocation, setCurrentLocation] =
-    useState<null | {latitude: number, longitude: number}>(null)
-
-
-  const [selectedMarker, setSelectedMarker] =
-    useState<null | google.maps.LatLng>(null);
-
-    const [currentPage, setCurrentPage] = useState(1);
-
-    const [notes, setNotes] = useState<Note[]>([{
-      userId: Guid.createEmpty(),
-      username: "mashaal95",
-      locationName: "Melbourne",
-      notesText : "as"
-    }])
-
-
-
+  // Use Effects 
 
   useEffect(() => {
     // Get the user's current location using the Geolocation API
@@ -124,12 +109,35 @@ const Map = (props : {username : string}) => {
     );
   }, []);
 
-  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    // Fetch notes from the API
+
+    mapNotesService.getNotesByLocation(locationName).then((response) => {
+      setNotes(response.data)
+    }).catch((error) => {
+      // Handle the error if needed
+      console.log("Error saving notes:", error);
+    });
+    
+    
+    mapNotesService.getUserIdByUsername(props.username)
+    .then((response) => {
+      setUserId(response.data)
+    })
+    .catch((error) => {
+      console.log("Error fetching notes:", error);
+    });
+  
+  }, [locationName]);
+
+  // End Use Effects
+
+
+// All Handlers
 
   const handleMarkerClick = (marker: google.maps.LatLng) => {
     setSelectedMarker(marker);
-
-  
   
     const { lat , lng } = marker
   fetchLocationName(lat(), lng());
@@ -151,25 +159,22 @@ const Map = (props : {username : string}) => {
     setSelectedMarker(marker);
   };
 
-  const [notesText, setNotesText] = useState("");
-  const [username, setUsername] = useState("");
-  const [locationName, setLocationName] = useState("");
-  const { register, handleSubmit, formState: { errors }, reset } = useForm();
-
-  const [selectedNote, setSelectedNote] = useState(null);
-
-  const handleOpenNote = (note : any) => {
-    setSelectedNote(note);
-  };
-
   const handleCloseNote = () => {
 
-    setSelectedNote(null);
     setIsOpen(false);
   };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  }
+
+// End All Handlers
+
+
+
   // Pagination logic
-  const totalNotes = notes.length;
-  const totalPages = Math.ceil(totalNotes / notesPerPage);
+const totalNotes = notes.length;
+const totalPages = Math.ceil(totalNotes / notesPerPage);
 const handlePageChange = (event: any,pageNumber: number) => {
   if (pageNumber >= 1 && pageNumber <= totalPages) {
     setCurrentPage(pageNumber);
@@ -183,7 +188,6 @@ const filteredNotes = notes.filter(
     note.username.toLowerCase().includes(searchQuery.toLowerCase())
 );
 
-
 const indexOfLastNote = currentPage * notesPerPage;
 const indexOfFirstNote = indexOfLastNote - notesPerPage;
 const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
@@ -191,35 +195,20 @@ const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
 
   const onSubmit = (data: any) => {
     // Make an API request to save the notes
-    // Replace 'apiEndpoint' with your actual API endpoint
-    // event.preventDefault();
-    axios
-      .post("https://localhost:7129/api/Notes", {
-        userId: userId,
-        locationName: locationName,
-        notesText: data.notesText
-      })
-      .then((response) => {
-        const requestData =  locationName;
-
-        axios.post('https://localhost:7129/api/Notes/locationName', requestData, {
-          headers: {
-            'Content-Type': 'application/json', // Set the appropriate content type for your raw data
-          },
-        })
-          .then((response) => {
-            // Handle the response
-            setNotes(response.data)
-          })
-          .catch((error) => {
-            // Handle errors
-            console.error(error);
-          });    
-      })
-      .catch((error) => {
+  
+    mapNotesService.postNotes(userId,locationName,data.notesText)
+    .then(() => {
+      mapNotesService.getNotesByLocation(locationName).then((response) => {
+        setNotes(response.data)
+      }).catch((error) => {
         // Handle the error if needed
         console.log("Error saving notes:", error);
       });
+      
+    }).catch((error) => {
+      // Handle the error if needed
+      console.log("Error saving notes:", error);
+    });
 
     setSnackbarOpen(true);
     // Reset the form
@@ -227,58 +216,12 @@ const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
     
   };
 
-    const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  }
-
-
-  useEffect(() => {
-    // Fetch notes from the API
-
-    // axios
-    //   .post("https://localhost:7129/api/Notes", {
-    //     userId: userId,
-    //     locationName: locationName,
-    //     notesText: data.notesText
-    //   })
-
-
-    const requestData =  locationName;
-
-    axios.post('https://localhost:7129/api/Notes/locationName', requestData, {
-      headers: {
-        'Content-Type': 'application/json', // Set the appropriate content type for your raw data
-      },
-    })
-      .then((response) => {
-        // Handle the response
-        setNotes(response.data)
-        console.log(response);
-      })
-      .catch((error) => {
-        // Handle errors
-        console.error(error);
-      });
-
-    
-    
-      axios
-      .get("https://localhost:7129/api/User/"+props.username)
-      .then((response) => {
-        setUserId(response.data)
-      })
-      .catch((error) => {
-        console.log("Error fetching notes:", error);
-      });
-  
-  }, [locationName]);
 
 
   if(!isLoaded) {
     return <></>
   }
  
-
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
 
@@ -312,7 +255,7 @@ const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
 
               <Typography variant="h6">Notes</Typography>
 
-              <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 2 }}>
         <TextField
           variant="outlined"
           label="Search Notes"
@@ -326,7 +269,6 @@ const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
           }}
         />
       </Box>
-
               {currentNotes.map((note) => (
                 <Card key={note.messageId} style={{ marginBottom: "1rem", borderRadius: "10px" }}>
                        <CardHeader
