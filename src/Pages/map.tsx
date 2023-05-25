@@ -12,18 +12,15 @@ import {
   Box,
   Pagination,
   AppBar,
-  Toolbar,
-  Avatar,
-  CardHeader
+  Toolbar
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/CloseOutlined";
 import { useForm } from "react-hook-form";
 import { Note } from "../Components/types";
 import { Guid } from "guid-typescript";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { red } from "@mui/material/colors";
 import mapNotesService from "../Service/mapNotesService";
+import NotesList from "../Components/notesList";
 
 const Map = (props: { username: string }) => {
   // All the initial consts
@@ -36,7 +33,7 @@ const Map = (props: { username: string }) => {
     lat: -37.8076, // Initial latitude
     lng: 144.9568 // Initial longitude
   };
-  const notesPerPage = 4;
+  const notesPerPage = 2;
   const apiKey =
     process.env.REACT_APP_SECRET_API !== undefined
       ? process.env.REACT_APP_SECRET_API
@@ -190,6 +187,8 @@ const Map = (props: { username: string }) => {
   const indexOfFirstNote = indexOfLastNote - notesPerPage;
   const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
 
+  // End of Pagination Logic
+
   const onSubmit = (data: any) => {
     // Make an API request to save the notes
 
@@ -245,13 +244,14 @@ const Map = (props: { username: string }) => {
               top: 80,
               left: 10,
               zIndex: 1,
-              width: "15rem"
+              width: "20%",
+              height: "60%"
             }}
           >
             <CardContent>
               <Typography variant="h6">Notes</Typography>
 
-              <Box sx={{ p: 2 }}>
+              <Box>
                 <TextField
                   variant="outlined"
                   label="Search Notes"
@@ -265,35 +265,9 @@ const Map = (props: { username: string }) => {
                   }}
                 />
               </Box>
-              {currentNotes.map((note) => (
-                <Card
-                  key={note.messageId}
-                  style={{ marginBottom: "1rem", borderRadius: "10px" }}
-                >
-                  <CardHeader
-                    avatar={
-                      <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">
-                        U
-                      </Avatar>
-                    }
-                    action={
-                      <IconButton aria-label="settings">
-                        <MoreVertIcon />
-                      </IconButton>
-                    }
-                    title={note.username}
-                    subheader={note.locationName
-                      .split(" ")
-                      .slice(0, 3)
-                      .join(" ")}
-                  />
-                  <CardContent>
-                    <Typography>{note.notesText}</Typography>
-                  </CardContent>
-                </Card>
-              ))}
+              <NotesList notes={currentNotes} />
               {totalPages > 1 && (
-                <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
+                <div>
                   <Pagination
                     count={Math.ceil(filteredNotes.length / notesPerPage)}
                     page={currentPage}
