@@ -27,6 +27,9 @@ Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
+### `.env`
+Change the strings in this file with accordance to your dev environment. Add your Maps API key and change the localhost addresses accordingly.
+
 ## Learn More
 
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
