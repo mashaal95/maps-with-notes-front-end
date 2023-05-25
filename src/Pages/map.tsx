@@ -59,6 +59,7 @@ const Map = (props : {username : string}) => {
 
   const fetchLocationName = (latitude : number, longitude : number) => {
 
+  
     const geocoder = new google.maps.Geocoder();
     const latLng = new google.maps.LatLng(latitude, longitude);
   
@@ -73,6 +74,9 @@ const Map = (props : {username : string}) => {
         console.log("Geocoder failed due to: " + status);
       }
     });
+
+
+
   };
 
 
@@ -104,28 +108,6 @@ const Map = (props : {username : string}) => {
     }])
 
 
-useEffect(() => {
-    // Fetch notes from the API
-    axios
-      .get("https://localhost:7129/api/Notes")
-      .then((response) => {
-        setNotes(response.data);
-      })
-      .catch((error) => {
-        console.log("Error fetching notes:", error);
-      });
-
-      axios
-      .get("https://localhost:7129/api/User/"+props.username)
-      .then((response) => {
-        console.log('response from my API '+ response.data)
-        setUserId(response.data)
-      })
-      .catch((error) => {
-        console.log("Error fetching notes:", error);
-      });
-  
-  }, []);
 
 
   useEffect(() => {
@@ -146,7 +128,8 @@ useEffect(() => {
 
   const handleMarkerClick = (marker: google.maps.LatLng) => {
     setSelectedMarker(marker);
-    
+
+  
   
     const { lat , lng } = marker
   fetchLocationName(lat(), lng());
@@ -210,9 +193,6 @@ const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
     // Make an API request to save the notes
     // Replace 'apiEndpoint' with your actual API endpoint
     // event.preventDefault();
-
-
-    console.log('actual userid'+userId)
     axios
       .post("https://localhost:7129/api/Notes", {
         userId: userId,
@@ -220,17 +200,21 @@ const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
         notesText: data.notesText
       })
       .then((response) => {
-        axios
-      .get("https://localhost:7129/api/Notes")
-      .then((response) => {
-        setNotes(response.data);
-      })
-      .catch((error) => {
-        console.log("Error fetching notes:", error);
-      });
-        // Handle the response data if needed
-  
-        console.log(response.data);
+        const requestData =  locationName;
+
+        axios.post('https://localhost:7129/api/Notes/locationName', requestData, {
+          headers: {
+            'Content-Type': 'application/json', // Set the appropriate content type for your raw data
+          },
+        })
+          .then((response) => {
+            // Handle the response
+            setNotes(response.data)
+          })
+          .catch((error) => {
+            // Handle errors
+            console.error(error);
+          });    
       })
       .catch((error) => {
         // Handle the error if needed
@@ -246,6 +230,49 @@ const currentNotes = filteredNotes.slice(indexOfFirstNote, indexOfLastNote);
     const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   }
+
+
+  useEffect(() => {
+    // Fetch notes from the API
+
+    // axios
+    //   .post("https://localhost:7129/api/Notes", {
+    //     userId: userId,
+    //     locationName: locationName,
+    //     notesText: data.notesText
+    //   })
+
+
+    const requestData =  locationName;
+
+    axios.post('https://localhost:7129/api/Notes/locationName', requestData, {
+      headers: {
+        'Content-Type': 'application/json', // Set the appropriate content type for your raw data
+      },
+    })
+      .then((response) => {
+        // Handle the response
+        setNotes(response.data)
+        console.log(response);
+      })
+      .catch((error) => {
+        // Handle errors
+        console.error(error);
+      });
+
+    
+    
+      axios
+      .get("https://localhost:7129/api/User/"+props.username)
+      .then((response) => {
+        setUserId(response.data)
+      })
+      .catch((error) => {
+        console.log("Error fetching notes:", error);
+      });
+  
+  }, [locationName]);
+
 
   if(!isLoaded) {
     return <></>
