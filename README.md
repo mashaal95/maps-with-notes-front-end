@@ -4,7 +4,6 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Installation instructions
 
-## Links
 [NodeJS Installation procedure Link](https://phoenixnap.com/kb/install-node-js-npm-on-windows "Install Note JS!")
 Install NodeJS on Windows first to run the project.
 
