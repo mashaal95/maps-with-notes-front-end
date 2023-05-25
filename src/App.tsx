@@ -23,13 +23,6 @@ function App() {
         {!isLoggedIn && <Login handleLogin={handleLogin} />}
         {isLoggedIn && <Map username={username} />}
       </ThemeProvider>
-      {/* <Router>
-    <Routes> 
-        <Route path="/" element={<Map/>} />        
-        <Route path="/login" element={<Login handleLogin={handleLogin}/>} />        
-    
-         </Routes>
-      </Router> */}
     </div>
   );
 }
